@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A clean, static design for a Markdown to HTML static site generator.">
+  <title>MD to HTML — Static Site Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="navbar page-container" aria-label="Main navigation">
+      <a class="brand" href="#" aria-label="MD to HTML home">
+        <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+        <span>MD to <span class="brand-highlight">HTML</span></span>
+      </a>
+
+      <div class="nav-links">
+        <a class="nav-link nav-link-active" href="#">Home</a>
+        <a class="nav-link" href="#">Docs</a>
+        <a class="nav-link" href="#">About</a>
+      </div>
+
+      <span class="theme-icon" aria-label="Dark theme" role="img">☾</span>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero introduces the project and its main benefits. -->
+    <section class="hero page-container">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-dot"></span> Markdown <span aria-hidden="true">→</span> HTML</p>
+        <h1>Markdown to HTML<span class="title-period">.</span></h1>
+        <p class="hero-subtitle">Static Site Generator</p>
+        <p class="hero-description">
+          Write your content in Markdown, convert it to beautiful HTML pages and build your own simple static website.
+        </p>
+
+        <div class="hero-highlights" aria-label="Project highlights">
+          <div class="highlight">
+            <span class="highlight-icon" aria-hidden="true">✳</span>
+            <span><strong>Simple</strong><small>Easy to use interface</small></span>
+          </div>
+          <div class="highlight">
+            <span class="highlight-icon" aria-hidden="true">↯</span>
+            <span><strong>Fast</strong><small>Instant conversion</small></span>
+          </div>
+          <div class="highlight">
+            <span class="highlight-icon" aria-hidden="true">▤</span>
+            <span><strong>Static</strong><small>No backend required</small></span>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <a class="button button-primary" href="#workspace">Start Converting <span aria-hidden="true">→</span></a>
+          <a class="button button-secondary" href="#features">View Documentation <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+
+      <!-- CSS-only illustration of Markdown becoming a webpage. -->
+      <div class="hero-art" aria-label="Illustration of Markdown code transforming into a webpage" role="img">
+        <div class="art-orbit orbit-one"></div>
+        <div class="art-orbit orbit-two"></div>
+        <div class="art-card markdown-card">
+          <div class="art-window-bar"><i></i><i></i><i></i><span>README.md</span></div>
+          <div class="art-code">
+            <p><b>#</b> Hello, world</p>
+            <p><b>##</b> Getting started</p>
+            <p class="art-muted">A little bit of <em>Markdown</em></p>
+            <p><b>-</b> Write something</p>
+            <p><b>-</b> Make it a website</p>
+          </div>
+        </div>
+        <span class="transform-arrow" aria-hidden="true">→</span>
+        <div class="art-card webpage-card">
+          <div class="art-window-bar"><i></i><i></i><i></i><span>your-site.html</span></div>
+          <div class="art-page">
+            <div class="page-heading"></div>
+            <div class="page-subheading"></div>
+            <div class="page-line"></div>
+            <div class="page-line page-line-short"></div>
+            <div class="page-list"><span></span><span></span><span></span></div>
+            <div class="page-button"></div>
+          </div>
+        </div>
+        <span class="art-spark spark-one" aria-hidden="true">✦</span>
+        <span class="art-spark spark-two" aria-hidden="true">+</span>
+      </div>
+    </section>
+
+    <!-- The two-column workspace is the central part of the page. -->
+    <section class="workspace page-container" id="workspace" aria-label="Markdown editor and HTML preview">
+      <article class="workspace-panel editor-panel">
+        <div class="panel-heading">
+          <div class="panel-title-group">
+            <span class="panel-icon editor-icon" aria-hidden="true">⌘</span>
+            <div>
+              <h2>Markdown Editor</h2>
+              <p>Write and format your content</p>
+            </div>
+          </div>
+          <span class="menu-symbol" aria-label="More editor options" role="img">☰</span>
+        </div>
+
+        <div class="static-menu" aria-label="Editor options preview">
+          <span>Upload .md File</span>
+          <span>New Document</span>
+          <span class="menu-danger">Clear Editor</span>
+        </div>
+
+        <div class="editor-surface" aria-label="Sample Markdown content">
+          <div class="line-numbers" aria-hidden="true">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+            <span>6</span><span>7</span><span>8</span><span>9</span>
+          </div>
+          <pre class="markdown-content"><code><span class="md-heading"># Welcome to MD to HTML</span>
+
+This is a simple Markdown to HTML
+static site generator.
+
+<span class="md-heading">## Features</span>
+
+- Easy to use interface
+- Fast conversion
+- Static HTML output</code></pre>
+        </div>
+
+        <div class="editor-status">
+          <span><span class="file-icon" aria-hidden="true">▤</span> example.md</span>
+          <span class="modified-status"><i></i> Modified</span>
+        </div>
+        <button class="button button-primary convert-button" type="button">Convert to HTML <span aria-hidden="true">→</span></button>
+      </article>
+
+      <article class="workspace-panel preview-panel">
+        <div class="panel-heading">
+          <div class="panel-title-group">
+            <span class="panel-icon preview-icon" aria-hidden="true">▧</span>
+            <div>
+              <h2>HTML Preview</h2>
+              <p>See how your page will look</p>
+            </div>
+          </div>
+          <div class="preview-modes" aria-label="Preview sizes">
+            <span class="mode-icon mode-active" aria-label="Desktop preview" role="img">▰</span>
+            <span class="mode-icon" aria-label="Mobile preview" role="img">▯</span>
+          </div>
+        </div>
+
+        <div class="rendered-page">
+          <div class="rendered-page-bar"><span></span><span>Preview</span><span class="preview-ready"><i></i> Ready</span></div>
+          <div class="rendered-content">
+            <h3>Welcome to MD to HTML</h3>
+            <p>This is a simple Markdown to HTML static site generator.</p>
+            <h4>Features</h4>
+            <ul>
+              <li>Easy to use interface</li>
+              <li>Fast conversion</li>
+              <li>Static HTML output</li>
+            </ul>
+            <p class="sample-link"><a href="#workspace">Learn more about Markdown <span aria-hidden="true">↗</span></a></p>
+          </div>
+        </div>
+
+        <div class="code-preview">
+          <div class="code-preview-heading">
+            <span><span class="code-brackets" aria-hidden="true">&lt;/&gt;</span> HTML Output</span>
+            <button class="copy-button" type="button">▢ <span>Copy</span></button>
+          </div>
+          <pre><code><span class="html-tag">&lt;h1&gt;</span>Welcome to MD to HTML<span class="html-tag">&lt;/h1&gt;</span>
+<span class="html-tag">&lt;p&gt;</span>This is a simple Markdown...<span class="html-tag">&lt;/p&gt;</span></code></pre>
+        </div>
+      </article>
+    </section>
+
+    <!-- A compact summary of the project's four core features. -->
+    <section class="feature-strip page-container" id="features" aria-label="Features">
+      <div class="feature-item">
+        <span class="feature-icon" aria-hidden="true">↗</span>
+        <span><strong>Convert Markdown</strong><small>Turn your text into HTML.</small></span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon" aria-hidden="true">▱</span>
+        <span><strong>Build Static Sites</strong><small>Fast and reliable.</small></span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon" aria-hidden="true">⌁</span>
+        <span><strong>No Backend</strong><small>100% frontend based.</small></span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon" aria-hidden="true">◇</span>
+        <span><strong>Open Source</strong><small>Built for learners.</small></span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer page-container">
+    <span>Made for curious minds.</span>
+    <span>MD to HTML <b>·</b> Static Site Generator</span>
+  </footer>
+</body>
+</html>
