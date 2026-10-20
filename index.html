@@ -133,6 +133,24 @@ static site generator.
         <button class="button button-primary convert-button" type="button">Convert to HTML <span aria-hidden="true">→</span></button>
         <button class="button button-secondary generate-button" type="button">Generate Website <span aria-hidden="true">↗</span></button>
         <p class="editor-message" id="editor-message" aria-live="polite"></p>
+
+        <section class="page-catalog" aria-labelledby="page-catalog-title">
+          <h3 id="page-catalog-title">Generated Pages</h3>
+          <div class="page-tools">
+            <label for="page-search">Search by filename or title</label>
+            <input id="page-search" type="search" placeholder="For example, example">
+            <label for="page-sort">Sort alphabetically by</label>
+            <div class="page-sort-controls">
+              <select id="page-sort">
+                <option value="filename">Filename</option>
+                <option value="title">Title</option>
+              </select>
+              <button class="button button-secondary sort-pages-button" type="button">Sort</button>
+            </div>
+          </div>
+          <p class="page-list-message" id="page-list-message" aria-live="polite">Loading generated pages...</p>
+          <ul class="generated-page-list" id="generated-page-list"></ul>
+        </section>
       </article>
 
       <article class="workspace-panel preview-panel">

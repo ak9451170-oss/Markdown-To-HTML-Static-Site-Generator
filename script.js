@@ -16,7 +16,13 @@ const copyStatus = document.querySelector("#copy-status");
 const convertButton = document.querySelector(".convert-button");
 const generateButton = document.querySelector(".generate-button");
 const copyButton = document.querySelector(".copy-button");
+const pageSearch = document.querySelector("#page-search");
+const pageSort = document.querySelector("#page-sort");
+const sortPagesButton = document.querySelector(".sort-pages-button");
+const pageListMessage = document.querySelector("#page-list-message");
+const generatedPageList = document.querySelector("#generated-page-list");
 let generatedHtml = "";
+let generatedPages = [];
 
 function updateEditorDetails() {
   const text = editor.value;
@@ -43,6 +49,109 @@ function resetPreviewState(message, kind = "") {
 function showEditorMessage(message, kind = "") {
   editorMessage.textContent = message;
   editorMessage.dataset.kind = kind;
+}
+
+function isValidPageList(pages) {
+  if (!Array.isArray(pages)) {
+    return false;
+  }
+
+  for (const page of pages) {
+    if (!page || typeof page !== "object" ||
+      typeof page.title !== "string" ||
+      typeof page.filename !== "string" ||
+      !/^[a-zA-Z0-9_-]+\.html$/i.test(page.filename) ||
+      page.filename.toLowerCase() === "index.html") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Checks each page in order and matches either its title or filename.
+function linearSearchPages(pages, query) {
+  const searchText = query.trim().toLowerCase();
+  const matchingPages = [];
+
+  for (let index = 0; index < pages.length; index += 1) {
+    const page = pages[index];
+    const filename = page.filename.toLowerCase();
+    const title = page.title.toLowerCase();
+
+    if (!searchText || filename.includes(searchText) || title.includes(searchText)) {
+      matchingPages.push(page);
+    }
+  }
+
+  return matchingPages;
+}
+
+// Bubble Sort compares neighboring pages; copying first keeps the source list unchanged.
+function bubbleSortPages(pages, sortBy) {
+  const sortedPages = pages.slice();
+  let hasSwapped = true;
+
+  for (let end = sortedPages.length - 1; end > 0 && hasSwapped; end -= 1) {
+    hasSwapped = false;
+    for (let index = 0; index < end; index += 1) {
+      const leftValue = sortedPages[index][sortBy].toLowerCase();
+      const rightValue = sortedPages[index + 1][sortBy].toLowerCase();
+
+      if (leftValue > rightValue) {
+        const temporaryPage = sortedPages[index];
+        sortedPages[index] = sortedPages[index + 1];
+        sortedPages[index + 1] = temporaryPage;
+        hasSwapped = true;
+      }
+    }
+  }
+
+  return sortedPages;
+}
+
+function updateGeneratedPageList() {
+  const query = pageSearch.value;
+  const matchingPages = linearSearchPages(generatedPages, query);
+  const visiblePages = bubbleSortPages(matchingPages, pageSort.value);
+  generatedPageList.replaceChildren();
+
+  if (generatedPages.length === 0) {
+    pageListMessage.textContent = "No generated pages yet. Add .md files and generate your website.";
+    return;
+  }
+
+  if (visiblePages.length === 0) {
+    pageListMessage.textContent = `No pages match "${query.trim()}".`;
+    return;
+  }
+
+  pageListMessage.textContent = `${visiblePages.length} ${visiblePages.length === 1 ? "page" : "pages"} shown.`;
+  for (const page of visiblePages) {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    const filename = document.createElement("small");
+
+    link.href = `output/${encodeURIComponent(page.filename)}`;
+    link.textContent = page.title;
+    filename.textContent = page.filename;
+    item.append(link, filename);
+    generatedPageList.append(item);
+  }
+}
+
+async function loadGeneratedPages() {
+  try {
+    const response = await fetch("/api/pages");
+    const result = await response.json();
+    if (!response.ok || !result.success || !isValidPageList(result.pages)) {
+      throw new Error(result.error || "The generated page list could not be loaded.");
+    }
+    generatedPages = result.pages;
+    updateGeneratedPageList();
+  } catch {
+    pageListMessage.textContent = "Could not load generated pages. Make sure the Node.js server is running.";
+  }
 }
 
 function convertAndRender() {
@@ -153,29 +262,67 @@ generateButton.addEventListener("click", async () => {
   showEditorMessage("Generating HTML files from the input folder...", "");
 
   try {
-    const response = await fetch("/api/generate", { method: "POST" });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "The website could not be generated.");
+    let response;
+    try {
+      response = await fetch("/api/generate", { method: "POST" });
+    } catch {
+      throw new Error("Could not connect to the Node.js server. Make sure it is running at http://localhost:3000.");
     }
 
-    const generatedCount = result.generatedFiles.length;
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error(`The server returned an invalid response (HTTP ${response.status}).`);
+    }
+
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      throw new Error("The server returned an incomplete generation report.");
+    }
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || `The website could not be generated (HTTP ${response.status}).`);
+    }
+
+    const reportFields = ["generatedFiles", "skippedFiles", "errors", "pages"];
+    const missingFields = reportFields.filter((field) => !Array.isArray(result[field]));
+    if (missingFields.includes("pages")) {
+      throw new Error("The running server returned no page metadata. Stop it with Ctrl+C and restart it using `node backend/server.js`, then reload this page.");
+    }
+    if (missingFields.length > 0) {
+      throw new Error(`The server returned an incomplete generation report. Missing: ${missingFields.join(", ")}.`);
+    }
+    if (reportFields.slice(0, 3).some((field) =>
+      result[field].some((item) => typeof item !== "string")
+    ) || !isValidPageList(result.pages)) {
+      throw new Error("The server returned an incomplete generation report.");
+    }
+
+    generatedPages = result.pages;
+    updateGeneratedPageList();
+
     const details = [
-      `${generatedCount} HTML ${generatedCount === 1 ? "file" : "files"} generated in output/.`
+      "Website generation completed.",
+      `Generated files: ${result.generatedFiles.length
+        ? result.generatedFiles.map((name) => `output/${name}`).join(", ")
+        : "none"}`
     ];
     if (result.skippedFiles.length > 0) {
-      details.push(`${result.skippedFiles.length} unsupported entr${result.skippedFiles.length === 1 ? "y was" : "ies were"} skipped.`);
+      details.push(`Skipped files: ${result.skippedFiles.join(", ")}`);
     }
     if (result.errors.length > 0) {
-      details.push(`${result.errors.length} file error${result.errors.length === 1 ? "" : "s"} occurred.`);
+      details.push(`Errors: ${result.errors.join("; ")}`);
     }
-    showEditorMessage(details.join(" "), result.errors.length > 0 ? "error" : "success");
+    showEditorMessage(details.join("\n"), result.errors.length > 0 ? "error" : "success");
   } catch (error) {
-    showEditorMessage(error.message || "Could not connect to the Node.js server.", "error");
+    showEditorMessage(error.message || "The website could not be generated.", "error");
   } finally {
     generateButton.disabled = false;
   }
 });
+
+pageSearch.addEventListener("input", updateGeneratedPageList);
+sortPagesButton.addEventListener("click", updateGeneratedPageList);
 
 copyButton.addEventListener("click", async () => {
   if (!generatedHtml) {
@@ -195,3 +342,4 @@ copyButton.addEventListener("click", async () => {
 });
 
 updateEditorDetails();
+loadGeneratedPages();

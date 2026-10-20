@@ -22,6 +22,46 @@ function sendJson(response, statusCode, data) {
   response.end(JSON.stringify(data));
 }
 
+function isSafeOutputFilename(filename) {
+  return /^[a-zA-Z0-9_-]+\.html$/i.test(filename) &&
+    filename.toLowerCase() !== "index.html";
+}
+
+function createHomepage(pages) {
+  const pageLinks = pages.length
+    ? `<ul>
+${pages.map((page) => `  <li><a href="./${escapeHtml(page.filename)}">${escapeHtml(page.title)}</a> <span>(${escapeHtml(page.filename)})</span></li>`).join("\n")}
+</ul>`
+    : `<p class="empty-state">No Markdown pages have been generated yet. Add .md files to the input folder and run the generator.</p>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generated Markdown Pages</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { max-width: 760px; margin: 0 auto; padding: 32px 20px; color: #1f2933; font: 16px/1.6 system-ui, sans-serif; }
+    h1 { color: #116b56; }
+    ul { padding-left: 22px; }
+    li { margin: 12px 0; overflow-wrap: anywhere; }
+    a { color: #087f65; }
+    span, .empty-state { color: #52616b; }
+    @media (max-width: 480px) { body { padding: 22px 14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Generated Markdown Pages</h1>
+    <p>Select a page to open it. The filename is shown beside each page title.</p>
+    ${pageLinks}
+  </main>
+</body>
+</html>
+`;
+}
+
 async function generateHtmlFiles() {
   await fs.mkdir(outputFolder, { recursive: true });
 
@@ -37,8 +77,8 @@ async function generateHtmlFiles() {
     throw error;
   }
 
-  const report = { generatedFiles: [], skippedFiles: [], errors: [] };
-  const usedOutputNames = new Set();
+  const report = { generatedFiles: [], skippedFiles: [], errors: [], pages: [] };
+  const usedOutputNames = new Set(["index.html"]);
 
   for (const entry of entries) {
     if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
@@ -71,8 +111,16 @@ async function generateHtmlFiles() {
     }
 
     const outputName = `${safeStem}.html`;
+    if (!isSafeOutputFilename(outputName)) {
+      report.errors.push(`${entry.name}: generated filename is not safe`);
+      continue;
+    }
     usedOutputNames.add(outputName.toLowerCase());
-    const outputPath = path.join(outputFolder, outputName);
+    const outputPath = path.resolve(outputFolder, outputName);
+    if (!outputPath.startsWith(`${outputFolder}${path.sep}`)) {
+      report.errors.push(`${entry.name}: generated filename is outside the output folder`);
+      continue;
+    }
     const title = escapeHtml(originalStem || "Untitled");
     const page = `<!DOCTYPE html>
 <html lang="en">
@@ -90,15 +138,73 @@ ${convertMarkdown(markdown)}
     try {
       await fs.writeFile(outputPath, page, "utf8");
       report.generatedFiles.push(outputName);
+      report.pages.push({ filename: outputName, title: originalStem || "Untitled" });
     } catch {
       report.errors.push(`${entry.name}: unable to write the output file`);
     }
   }
 
+  try {
+    await fs.writeFile(path.join(outputFolder, "index.html"), createHomepage(report.pages), "utf8");
+  } catch {
+    report.errors.push("index.html: unable to write the generated homepage");
+  }
+
   return report;
 }
 
+async function readGeneratedPages() {
+  let homepage;
+  try {
+    homepage = await fs.readFile(path.join(outputFolder, "index.html"), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+
+  const pages = [];
+  const linkPattern = /<li><a href="\.\/([^"]+)">([\s\S]*?)<\/a> <span>\(([^()]*)\)<\/span><\/li>/g;
+  let match;
+  while ((match = linkPattern.exec(homepage)) !== null) {
+    const filename = match[1];
+    if (isSafeOutputFilename(filename) && match[3] === filename) {
+      const entities = {
+        "&amp;": "&",
+        "&lt;": "<",
+        "&gt;": ">",
+        "&quot;": '"',
+        "&#39;": "'"
+      };
+      const title = match[2].replace(/&(?:amp|lt|gt|quot|#39);/g, (entity) => entities[entity]);
+      pages.push({ filename, title });
+    }
+  }
+
+  return pages;
+}
+
 async function serveStaticFile(requestPath, response) {
+  if (requestPath.startsWith("/output/")) {
+    const outputName = requestPath.slice("/output/".length);
+    if (!/^[a-zA-Z0-9_-]+\.html$/i.test(outputName)) {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+
+    try {
+      const contents = await fs.readFile(path.join(outputFolder, outputName));
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(contents);
+    } catch (error) {
+      response.writeHead(error.code === "ENOENT" ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end(error.code === "ENOENT" ? "Not found" : "Unable to read the generated page");
+    }
+    return;
+  }
+
   const publicFile = publicFiles.get(requestPath);
   if (!publicFile) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -119,13 +225,32 @@ async function serveStaticFile(requestPath, response) {
 const server = http.createServer(async (request, response) => {
   const requestUrl = new URL(request.url, `http://${request.headers.host || "localhost"}`);
 
+  if (request.method === "GET" && requestUrl.pathname === "/api/pages") {
+    try {
+      sendJson(response, 200, { success: true, pages: await readGeneratedPages() });
+    } catch {
+      sendJson(response, 500, { success: false, error: "Generated pages could not be read." });
+    }
+    return;
+  }
+
   if (request.method === "POST" && requestUrl.pathname === "/api/generate") {
     try {
       const report = await generateHtmlFiles();
-      sendJson(response, 200, { success: true, ...report });
+      sendJson(response, 200, {
+        success: true,
+        generatedFiles: report.generatedFiles,
+        skippedFiles: report.skippedFiles,
+        errors: report.errors,
+        pages: report.pages
+      });
     } catch (error) {
       sendJson(response, error.statusCode || 500, {
         success: false,
+        generatedFiles: [],
+        skippedFiles: [],
+        errors: [],
+        pages: [],
         error: error.statusCode ? error.message : "The website could not be generated."
       });
     }
