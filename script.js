@@ -21,8 +21,15 @@ const pageSort = document.querySelector("#page-sort");
 const sortPagesButton = document.querySelector(".sort-pages-button");
 const pageListMessage = document.querySelector("#page-list-message");
 const generatedPageList = document.querySelector("#generated-page-list");
+const conversionProjectName = document.querySelector("#conversion-project-name");
+const saveConversionButton = document.querySelector(".save-conversion-button");
+const historyMessage = document.querySelector("#history-message");
+const conversionSearch = document.querySelector("#conversion-search");
+const sortConversionsButton = document.querySelector(".sort-conversions-button");
+const conversionHistoryList = document.querySelector("#conversion-history-list");
 let generatedHtml = "";
 let generatedPages = [];
+let conversionHistory = [];
 
 function updateEditorDetails() {
   const text = editor.value;
@@ -67,6 +74,15 @@ function isValidPageList(pages) {
   }
 
   return true;
+}
+
+function isValidConversionList(conversions) {
+  return Array.isArray(conversions) && conversions.every((conversion) =>
+    conversion && typeof conversion === "object" &&
+    Number.isSafeInteger(conversion.id) && conversion.id > 0 &&
+    typeof conversion.project_name === "string" &&
+    typeof conversion.created_at === "string"
+  );
 }
 
 // Checks each page in order and matches either its title or filename.
@@ -151,6 +167,157 @@ async function loadGeneratedPages() {
     updateGeneratedPageList();
   } catch {
     pageListMessage.textContent = "Could not load generated pages. Make sure the Node.js server is running.";
+  }
+}
+
+function updateConversionHistory() {
+  const matchingConversions = linearSearchPages(conversionHistory, conversionSearch.value);
+  const visibleConversions = bubbleSortPages(matchingConversions, "title");
+  conversionHistoryList.replaceChildren();
+
+  if (conversionHistory.length === 0) {
+    historyMessage.textContent = "No saved conversions yet.";
+    return;
+  }
+
+  if (visibleConversions.length === 0) {
+    historyMessage.textContent = `No conversions match "${conversionSearch.value.trim()}".`;
+    return;
+  }
+
+  historyMessage.textContent = `${visibleConversions.length} saved ${visibleConversions.length === 1 ? "conversion" : "conversions"}.`;
+  for (const conversion of visibleConversions) {
+    const item = document.createElement("li");
+    const details = document.createElement("div");
+    const name = document.createElement("strong");
+    const date = document.createElement("small");
+    const actions = document.createElement("div");
+    const loadButton = document.createElement("button");
+    const deleteButton = document.createElement("button");
+
+    details.className = "conversion-history-details";
+    name.textContent = conversion.title;
+    date.textContent = `Saved ${new Date(conversion.created_at).toLocaleString()}`;
+    details.append(name, date);
+
+    actions.className = "conversion-history-actions";
+    loadButton.type = "button";
+    loadButton.className = "history-action-button";
+    loadButton.dataset.loadConversion = String(conversion.id);
+    loadButton.textContent = "Load";
+    deleteButton.type = "button";
+    deleteButton.className = "history-action-button history-delete-button";
+    deleteButton.dataset.deleteConversion = String(conversion.id);
+    deleteButton.textContent = "Delete";
+    actions.append(loadButton, deleteButton);
+
+    item.append(details, actions);
+    conversionHistoryList.append(item);
+  }
+}
+
+async function loadConversionHistory() {
+  historyMessage.textContent = "Loading saved conversions...";
+  try {
+    const response = await fetch("/api/conversions");
+    const result = await response.json();
+    if (!response.ok || !result.success || !isValidConversionList(result.conversions)) {
+      throw new Error(result.error || "Conversion history could not be loaded.");
+    }
+
+    conversionHistory = result.conversions.map((conversion) => ({
+      id: conversion.id,
+      title: conversion.project_name,
+      filename: String(conversion.id),
+      created_at: conversion.created_at
+    }));
+    updateConversionHistory();
+  } catch (error) {
+    conversionHistory = [];
+    conversionHistoryList.replaceChildren();
+    historyMessage.textContent = error.message || "History unavailable. Check the database connection and project setup.";
+  }
+}
+
+async function saveConversion() {
+  const projectName = conversionProjectName.value.trim();
+  if (!projectName || projectName.length > 255) {
+    showEditorMessage("Enter a conversion name of 1 to 255 characters.", "error");
+    conversionProjectName.focus();
+    return;
+  }
+  if (!editor.value.trim()) {
+    showEditorMessage("Enter some Markdown before saving a conversion.", "error");
+    editor.focus();
+    return;
+  }
+
+  saveConversionButton.disabled = true;
+  showEditorMessage("Saving conversion to the database...", "");
+  try {
+    const response = await fetch("/api/conversions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectName,
+        markdownContent: editor.value
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success || !Number.isSafeInteger(result.id) || result.id < 1) {
+      throw new Error(result.error || `Conversion could not be saved (HTTP ${response.status}).`);
+    }
+
+    showEditorMessage(`Conversion saved to history (ID: ${result.id}).`, "success");
+    await loadConversionHistory();
+  } catch (error) {
+    showEditorMessage(error.message || "Conversion could not be saved.", "error");
+  } finally {
+    saveConversionButton.disabled = false;
+  }
+}
+
+async function loadSavedConversion(id) {
+  try {
+    const response = await fetch(`/api/conversions/${encodeURIComponent(id)}`);
+    const result = await response.json();
+    const conversion = result && result.conversion;
+    if (!response.ok || !result.success || !conversion ||
+      typeof conversion.markdown_content !== "string" ||
+      typeof conversion.generated_html !== "string" ||
+      typeof conversion.project_name !== "string") {
+      throw new Error(result.error || "The selected conversion could not be loaded.");
+    }
+
+    editor.value = conversion.markdown_content;
+    conversionProjectName.value = conversion.project_name;
+    fileName.textContent = `${conversion.project_name}.md`;
+    editStatus.innerHTML = "<i></i> Saved conversion";
+    updateEditorDetails();
+    generatedHtml = conversion.generated_html;
+    renderedContent.innerHTML = generatedHtml;
+    htmlOutput.textContent = generatedHtml;
+    showEditorMessage(`Loaded "${conversion.project_name}" from history.`, "success");
+  } catch (error) {
+    showEditorMessage(error.message || "The selected conversion could not be loaded.", "error");
+  }
+}
+
+async function deleteSavedConversion(id, name) {
+  if (!window.confirm(`Delete the saved conversion "${name}"? This will not delete generated HTML files.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/conversions/${encodeURIComponent(id)}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || `Conversion could not be deleted (HTTP ${response.status}).`);
+    }
+    historyMessage.textContent = `Deleted "${name}" from conversion history.`;
+    await loadConversionHistory();
+  } catch (error) {
+    historyMessage.textContent = error.message || "The conversion could not be deleted.";
   }
 }
 
@@ -245,6 +412,7 @@ fileInput.addEventListener("change", async () => {
   try {
     editor.value = await file.text();
     fileName.textContent = file.name;
+    conversionProjectName.value = file.name.replace(/\.md$/i, "");
     editStatus.innerHTML = "<i></i> Modified";
     updateEditorDetails();
     convertAndRender();
@@ -323,6 +491,26 @@ generateButton.addEventListener("click", async () => {
 
 pageSearch.addEventListener("input", updateGeneratedPageList);
 sortPagesButton.addEventListener("click", updateGeneratedPageList);
+conversionSearch.addEventListener("input", updateConversionHistory);
+sortConversionsButton.addEventListener("click", updateConversionHistory);
+saveConversionButton.addEventListener("click", saveConversion);
+conversionHistoryList.addEventListener("click", (event) => {
+  const loadButton = event.target.closest("[data-load-conversion]");
+  if (loadButton) {
+    loadSavedConversion(loadButton.dataset.loadConversion);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-conversion]");
+  if (deleteButton) {
+    const conversion = conversionHistory.find((item) =>
+      item.id === Number(deleteButton.dataset.deleteConversion)
+    );
+    if (conversion) {
+      deleteSavedConversion(conversion.id, conversion.title);
+    }
+  }
+});
 
 copyButton.addEventListener("click", async () => {
   if (!generatedHtml) {
@@ -343,3 +531,4 @@ copyButton.addEventListener("click", async () => {
 
 updateEditorDetails();
 loadGeneratedPages();
+loadConversionHistory();

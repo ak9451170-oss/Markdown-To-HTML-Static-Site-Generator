@@ -949,6 +949,131 @@ h1 {
   color: #70c9ad;
 }
 
+.conversion-history {
+  display: grid;
+  gap: 7px;
+  margin-top: 19px;
+  padding-top: 15px;
+  border-top: 1px solid var(--soft-border);
+}
+
+.conversion-history h3 {
+  margin: 0 0 3px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.conversion-history label {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.conversion-history input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  outline: none;
+  background: var(--editor);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.conversion-history input:focus {
+  border-color: var(--accent);
+}
+
+.save-conversion-button {
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.save-conversion-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.history-message {
+  margin: 1px 0;
+  color: var(--muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.history-sort-controls {
+  align-items: center;
+}
+
+.history-sort-controls label {
+  margin: 0;
+}
+
+.sort-conversions-button {
+  min-height: 34px;
+  padding-inline: 12px;
+  cursor: pointer;
+}
+
+.conversion-history-list {
+  display: grid;
+  gap: 7px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conversion-history-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid var(--soft-border);
+  border-radius: 7px;
+  background: rgba(9, 20, 31, 0.55);
+}
+
+.conversion-history-details {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.conversion-history-details strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 10px;
+}
+
+.conversion-history-details small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.conversion-history-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.history-action-button {
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #11222e;
+  color: var(--accent);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.history-delete-button {
+  color: #e39a91;
+}
+
 /* Four feature summaries and small footer. */
 .feature-strip {
   display: grid;

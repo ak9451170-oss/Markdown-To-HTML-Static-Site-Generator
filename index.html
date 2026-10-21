@@ -134,6 +134,21 @@ static site generator.
         <button class="button button-secondary generate-button" type="button">Generate Website <span aria-hidden="true">↗</span></button>
         <p class="editor-message" id="editor-message" aria-live="polite"></p>
 
+        <section class="conversion-history" aria-labelledby="conversion-history-title">
+          <h3 id="conversion-history-title">Conversion History</h3>
+          <label for="conversion-project-name">Conversion name</label>
+          <input id="conversion-project-name" type="text" maxlength="255" value="example" placeholder="For example, My project">
+          <button class="button button-secondary save-conversion-button" type="button">Save Conversion</button>
+          <p class="history-message" id="history-message" aria-live="polite">Loading saved conversions...</p>
+          <label for="conversion-search">Search saved conversions by name</label>
+          <input id="conversion-search" type="search" placeholder="For example, project">
+          <div class="page-sort-controls history-sort-controls">
+            <label for="conversion-sort">Sort alphabetically by name</label>
+            <button class="button button-secondary sort-conversions-button" type="button">Sort</button>
+          </div>
+          <ul class="conversion-history-list" id="conversion-history-list"></ul>
+        </section>
+
         <section class="page-catalog" aria-labelledby="page-catalog-title">
           <h3 id="page-catalog-title">Generated Pages</h3>
           <div class="page-tools">

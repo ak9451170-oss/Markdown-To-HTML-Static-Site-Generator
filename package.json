@@ -1,0 +1,21 @@
+{
+  "name": "m-and-html-ssg",
+  "version": "1.0.0",
+  "description": "A beginner-friendly Markdown-to-HTML static site generator. The browser-based editor keeps its live preview, and a small Node.js backend can generate HTML files from Markdown files in `input/`.",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.8",
+    "mysql2": "^3.24.6"
+  }
+}
